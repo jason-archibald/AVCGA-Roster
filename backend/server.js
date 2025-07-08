@@ -1,0 +1,11 @@
+require('dotenv').config({ path: './.env' });
+const express = require('express');
+const cors = require('cors');
+const pool = require('./config/db');
+const app = express();
+const PORT = process.env.PORT || 3000;
+app.use(cors()); app.use(express.json());
+(async () => { try { await pool.query('SELECT NOW()'); console.log('Database connection successful.'); } catch (err) { console.error('!!! DATABASE CONNECTION FAILED:', err.message); }})();
+app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/users', require('./routes/userRoutes'));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
