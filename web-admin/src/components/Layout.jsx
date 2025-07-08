@@ -5,26 +5,45 @@ import { NavLink, useNavigate } from 'react-router-dom';
 const Layout = ({ children }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const handleLogout = () => { logout(); navigate('/login'); };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh' }}>
-            <aside style={{ width: '220px', background: '#333', color: 'white', padding: '1rem', flexShrink: 0 }}>
-                <h2>Admin Menu</h2>
-                <nav style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <NavLink to="/dashboard">Dashboard</NavLink>
-                    <NavLink to="/rosters">Rosters</NavLink>
-                    <NavLink to="/users">Members</NavLink>
-                    <NavLink to="/assets">Assets</NavLink>
-                    <NavLink to="/organization">Organization</NavLink>
+        <div>
+            <header style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                padding: '1rem', 
+                borderBottom: '1px solid #ccc', 
+                background: '#2c3e50',
+                color: 'white'
+            }}>
+                <h1 style={{ margin: 0 }}>AVCGA Admin Portal</h1>
+                <nav>
+                    {user ? (
+                        <>
+                            <NavLink to="/dashboard" style={{ color: 'white', marginLeft: '1rem' }}>Dashboard</NavLink>
+                            <NavLink to="/users" style={{ color: 'white', marginLeft: '1rem' }}>Members</NavLink>
+                            <NavLink to="/organization" style={{ color: 'white', marginLeft: '1rem' }}>Organization</NavLink>
+                            <NavLink to="/assets" style={{ color: 'white', marginLeft: '1rem' }}>Assets</NavLink>
+                            <NavLink to="/rosters" style={{ color: 'white', marginLeft: '1rem' }}>Rosters</NavLink>
+                            <span style={{ marginLeft: '2rem' }}>Welcome, {user.first_name}!</span>
+                            <button onClick={handleLogout} style={{ marginLeft: '1rem' }}>Logout</button>
+                        </>
+                    ) : (
+                        <NavLink to="/login" style={{ color: 'white' }}>Login</NavLink>
+                    )}
                 </nav>
-                <div style={{marginTop: 'auto'}}>
-                    {user && <p style={{fontSize:'0.8em'}}>{user.email}</p>}
-                    <button onClick={handleLogout} style={{width: '100%'}}>Logout</button>
-                </div>
-            </aside>
-            <main style={{flexGrow: 1, padding: '2rem'}}>{children}</main>
+            </header>
+            <main style={{ padding: '1rem' }}>
+                {children}
+            </main>
         </div>
     );
 };
+
 export default Layout;

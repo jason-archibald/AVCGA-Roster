@@ -1,28 +1,22 @@
-# This is the definitive, working configuration for the AVCGA CrewHub project.
-# It should be used with Docker Compose v2 (i.e., `docker compose` command).
-# The top-level 'version' attribute is obsolete and has been removed.
+# AVCGA CrewHub - Docker Compose Configuration
+# Updated to properly handle environment variables
 
 services:
   # PostgreSQL Database Service
   db:
     image: postgres:15-alpine
     restart: always
-    # Loads variables from the specified file to use in this service definition
     env_file:
       - ./backend/.env
-    # Sets variables INSIDE the container for the PostgreSQL image to use
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME:-avcga_crew_hub}
+      POSTGRES_USER: ${DB_USER:-avcga_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-Password123}
     volumes:
-      # Persists database data across container restarts
       - db_data:/var/lib/postgresql/data
-      # Mounts the entire SQL directory to allow the entrypoint to run all .sql files
       - ./backend/sql/:/docker-entrypoint-initdb.d/
     healthcheck:
-      # This command checks if the database is ready to accept connections from the specified user.
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-avcga_user} -d ${DB_NAME:-avcga_crew_hub}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -32,14 +26,13 @@ services:
     build:
       context: ./backend
     restart: always
-    # This loads all variables from the specified file directly into the container's environment.
     env_file:
       - ./backend/.env
+    environment:
+      - NODE_ENV=production
     ports:
-      - "3000:3000" # Maps container port 3000 to host port 3000 for Nginx to proxy to
+      - "3000:3000"
     depends_on:
-      # This ensures the backend service does not start until the 'db' service
-      # reports itself as 'healthy' based on the healthcheck command.
       db:
         condition: service_healthy
 
@@ -49,7 +42,7 @@ services:
       context: ./member-web
     restart: always
     ports:
-      - "8080:80" # Maps container port 80 to host port 8080
+      - "8080:80"
 
   # Frontend Admin Portal (React.js)
   web-admin:
@@ -57,7 +50,7 @@ services:
       context: ./web-admin
     restart: always
     ports:
-      - "8081:80" # Maps container port 80 to host port 8081
+      - "8081:80"
 
 volumes:
-  db_data: # Defines the named volume for persistent database storage
+  db_data:
