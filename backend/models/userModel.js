@@ -1,55 +1,107 @@
 const pool = require('../config/db');
 
-// Using plain text password for development
-const passwordColumn = 'password';
+const userModel = {
+    findAll: async () => {
+        const result = await pool.query(`
+            SELECT u.id, u.avcga_member_id, u.email, u.first_name, u.last_name, 
+                   u.phone_primary, u.phone_secondary, u.role, u.status, u.join_date, 
+                   u.address, u.postal_code, u.emergency_contact_name, u.emergency_contact_phone,
+                   f.name as flotilla_name, s.name as squadron_name,
+                   u.last_login, u.created_at, u.updated_at
+            FROM users u
+            LEFT JOIN flotillas f ON u.flotilla_id = f.id
+            LEFT JOIN squadrons s ON f.squadron_id = s.id
+            ORDER BY u.last_name, u.first_name
+        `);
+        return result.rows;
+    },
 
-const findAll = async () => {
-    const query = `
-        SELECT u.id, u.avcga_member_id, u.first_name, u.last_name, u.email, u.role, u.status, f.name as flotilla_name
-        FROM users u
-        LEFT JOIN flotillas f ON u.flotilla_id = f.id
-        ORDER BY u.last_name, u.first_name`;
-    const result = await pool.query(query);
-    return result.rows;
+    findById: async (id) => {
+        const result = await pool.query(`
+            SELECT u.*, f.name as flotilla_name, s.name as squadron_name
+            FROM users u
+            LEFT JOIN flotillas f ON u.flotilla_id = f.id
+            LEFT JOIN squadrons s ON f.squadron_id = s.id
+            WHERE u.id = $1
+        `, [id]);
+        return result.rows[0];
+    },
+
+    findByEmail: async (email) => {
+        const result = await pool.query(`
+            SELECT u.*, f.name as flotilla_name, s.name as squadron_name
+            FROM users u
+            LEFT JOIN flotillas f ON u.flotilla_id = f.id
+            LEFT JOIN squadrons s ON f.squadron_id = s.id
+            WHERE u.email = $1
+        `, [email]);
+        return result.rows[0];
+    },
+
+    create: async (userData) => {
+        const {
+            avcga_member_id, email, password, first_name, last_name,
+            phone_primary, phone_secondary, role, status, join_date,
+            emergency_contact_name, emergency_contact_phone,
+            address, postal_code, personal_notes, flotilla_id
+        } = userData;
+
+        const result = await pool.query(`
+            INSERT INTO users (
+                avcga_member_id, email, password, first_name, last_name,
+                phone_primary, phone_secondary, role, status, join_date,
+                emergency_contact_name, emergency_contact_phone,
+                address, postal_code, personal_notes, flotilla_id
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+            RETURNING *
+        `, [
+            avcga_member_id, email, password, first_name, last_name,
+            phone_primary, phone_secondary, role || 'Member', status || 'Active', 
+            join_date || new Date(), emergency_contact_name, emergency_contact_phone,
+            address, postal_code, personal_notes, flotilla_id
+        ]);
+        return result.rows[0];
+    },
+
+    update: async (id, userData) => {
+        const fields = [];
+        const values = [];
+        let paramCount = 1;
+
+        Object.keys(userData).forEach(key => {
+            if (userData[key] !== undefined && key !== 'id') {
+                fields.push(`${key} = $${paramCount}`);
+                values.push(userData[key]);
+                paramCount++;
+            }
+        });
+
+        if (fields.length === 0) {
+            throw new Error('No fields to update');
+        }
+
+        values.push(id);
+        const result = await pool.query(`
+            UPDATE users 
+            SET ${fields.join(', ')}, updated_at = NOW()
+            WHERE id = $${paramCount}
+            RETURNING *
+        `, values);
+        
+        return result.rows[0];
+    },
+
+    delete: async (id) => {
+        await pool.query('DELETE FROM users WHERE id = $1', [id]);
+    },
+
+    updateLastLogin: async (id) => {
+        await pool.query(`
+            UPDATE users 
+            SET last_login = NOW() 
+            WHERE id = $1
+        `, [id]);
+    }
 };
 
-const findById = async (id) => {
-    const query = `SELECT * FROM users WHERE id = $1`;
-    const result = await pool.query(query, [id]);
-    return result.rows[0];
-};
-
-const create = async (userData) => {
-    const { email, password, first_name, last_name, role, status, avcga_member_id, flotilla_id } = userData;
-    const query = `
-        INSERT INTO users (email, ${passwordColumn}, first_name, last_name, role, status, avcga_member_id, flotilla_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING id, email, first_name, last_name;
-    `;
-    const result = await pool.query(query, [email, password, first_name, last_name, role, status, avcga_member_id, flotilla_id]);
-    return result.rows[0];
-};
-
-const update = async (id, userData) => {
-    const { first_name, last_name, email, role, status, avcga_member_id, flotilla_id, personal_notes } = userData;
-    const query = `
-        UPDATE users
-        SET first_name = $1, last_name = $2, email = $3, role = $4, status = $5, avcga_member_id = $6, flotilla_id = $7, personal_notes = $8, updated_at = NOW()
-        WHERE id = $9
-        RETURNING *;
-    `;
-    const result = await pool.query(query, [first_name, last_name, email, role, status, avcga_member_id, flotilla_id, personal_notes, id]);
-    return result.rows[0];
-};
-
-const remove = async (id) => {
-    await pool.query('DELETE FROM users WHERE id = $1', [id]);
-};
-
-module.exports = {
-    findAll,
-    findById,
-    create,
-    update,
-    remove,
-};
+module.exports = userModel;

@@ -1,5 +1,5 @@
 # AVCGA CrewHub - Docker Compose Configuration
-# Updated to properly handle environment variables
+# Complete system with proper environment handling
 
 services:
   # PostgreSQL Database Service
@@ -11,7 +11,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_NAME:-avcga_crew_hub}
       POSTGRES_USER: ${DB_USER:-avcga_user}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-Password123}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-Archie1977}
     volumes:
       - db_data:/var/lib/postgresql/data
       - ./backend/sql/:/docker-entrypoint-initdb.d/

@@ -1,4 +1,4 @@
-const permissionModel = require('../models/permissionModel');
+const pool = require('../config/db');
 
 const handleApiError = (res, err, entity) => {
     console.error(`Error in ${entity} controller:`, err.message);
@@ -8,67 +8,23 @@ const handleApiError = (res, err, entity) => {
 module.exports = {
     getUserPermissions: async (req, res) => {
         try {
-            const permissions = await permissionModel.getUserPermissions(req.user.id);
-            res.json(permissions);
+            const result = await pool.query(`
+                SELECT p.code, p.name, pc.name as category
+                FROM role_permissions rp
+                JOIN permissions p ON p.id = rp.permission_id
+                JOIN permission_categories pc ON pc.id = p.category_id
+                WHERE rp.role_name = $1
+                ORDER BY pc.name, p.name
+            `, [req.user.role]);
+            res.json(result.rows);
         } catch (err) {
             handleApiError(res, err, 'user permissions');
         }
     },
 
-    getAllPermissions: async (req, res) => {
-        try {
-            const permissions = await permissionModel.getAllPermissions();
-            res.json(permissions);
-        } catch (err) {
-            handleApiError(res, err, 'permissions');
-        }
-    },
-
-    getPermissionCategories: async (req, res) => {
-        try {
-            const categories = await permissionModel.getPermissionCategories();
-            res.json(categories);
-        } catch (err) {
-            handleApiError(res, err, 'permission categories');
-        }
-    },
-
-    getRolePermissions: async (req, res) => {
-        try {
-            const permissions = await permissionModel.getRolePermissions(req.params.roleName);
-            res.json(permissions);
-        } catch (err) {
-            handleApiError(res, err, 'role permissions');
-        }
-    },
-
-    grantUserPermission: async (req, res) => {
-        try {
-            const { permissionCode, notes } = req.body;
-            const result = await permissionModel.grantUserPermission(
-                req.params.userId, 
-                permissionCode, 
-                req.user.id, 
-                notes
-            );
-            res.json(result);
-        } catch (err) {
-            handleApiError(res, err, 'grant permission');
-        }
-    },
-
-    revokeUserPermission: async (req, res) => {
-        try {
-            const { permissionCode, notes } = req.body;
-            const result = await permissionModel.revokeUserPermission(
-                req.params.userId, 
-                permissionCode, 
-                req.user.id, 
-                notes
-            );
-            res.json(result);
-        } catch (err) {
-            handleApiError(res, err, 'revoke permission');
-        }
-    }
+    getAllPermissions: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    getPermissionCategories: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    getRolePermissions: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    grantUserPermission: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    revokeUserPermission: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); }
 };

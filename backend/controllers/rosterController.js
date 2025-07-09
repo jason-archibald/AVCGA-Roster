@@ -1,23 +1,23 @@
-const rosterModel = require('../models/rosterModel');
-const shiftRoleModel = require('../models/shiftRoleModel');
+const pool = require('../config/db');
 
 const handleApiError = (res, err, entity) => {
     console.error(`Error in ${entity} controller:`, err.message);
-    if (err.code === '23505') {
-        return res.status(400).json({ message: `A ${entity} with this identifier already exists.` });
-    }
-    if (err.code === '23503') {
-        return res.status(400).json({ message: 'Referenced record does not exist.' });
-    }
     res.status(500).json({ message: err.message || 'Server Error' });
 };
 
 module.exports = {
-    // BASIC ROSTER CRUD
     getAllRosters: async (req, res) => {
         try {
-            const rosters = await rosterModel.findAll();
-            res.json(rosters);
+            const result = await pool.query(`
+                SELECT r.*, 
+                       u.first_name || ' ' || u.last_name as created_by_name,
+                       f.name as flotilla_name
+                FROM rosters r
+                LEFT JOIN users u ON r.created_by = u.id
+                LEFT JOIN flotillas f ON r.flotilla_id = f.id
+                ORDER BY r.start_datetime DESC
+            `);
+            res.json(result.rows);
         } catch (err) {
             handleApiError(res, err, 'roster');
         }
@@ -25,170 +25,48 @@ module.exports = {
 
     getRosterById: async (req, res) => {
         try {
-            const roster = await rosterModel.findById(req.params.id);
-            if (!roster) {
+            const result = await pool.query(`
+                SELECT r.*, 
+                       u.first_name || ' ' || u.last_name as created_by_name,
+                       f.name as flotilla_name
+                FROM rosters r
+                LEFT JOIN users u ON r.created_by = u.id
+                LEFT JOIN flotillas f ON r.flotilla_id = f.id
+                WHERE r.id = $1
+            `, [req.params.id]);
+            
+            if (result.rows.length === 0) {
                 return res.status(404).json({ message: 'Roster not found' });
             }
-            res.json(roster);
+            
+            res.json(result.rows[0]);
         } catch (err) {
             handleApiError(res, err, 'roster');
         }
     },
 
-    createRoster: async (req, res) => {
-        try {
-            const rosterData = { ...req.body, created_by: req.user.id };
-            const roster = await rosterModel.create(rosterData);
-            res.status(201).json(roster);
-        } catch (err) {
-            handleApiError(res, err, 'roster');
-        }
-    },
-
-    updateRoster: async (req, res) => {
-        try {
-            const roster = await rosterModel.update(req.params.id, req.body);
-            if (!roster) {
-                return res.status(404).json({ message: 'Roster not found' });
-            }
-            res.json(roster);
-        } catch (err) {
-            handleApiError(res, err, 'roster');
-        }
-    },
-
-    deleteRoster: async (req, res) => {
-        try {
-            await rosterModel.remove(req.params.id);
-            res.status(204).send();
-        } catch (err) {
-            handleApiError(res, err, 'roster');
-        }
-    },
-
-    // ASSIGNMENT MANAGEMENT
-    getRosterAssignments: async (req, res) => {
-        try {
-            const assignments = await rosterModel.findAssignments(req.params.id);
-            res.json(assignments);
-        } catch (err) {
-            handleApiError(res, err, 'roster assignment');
-        }
-    },
-
-    assignMemberToRoster: async (req, res) => {
-        try {
-            const assignmentData = { ...req.body, assigned_by: req.user.id };
-            const assignment = await rosterModel.createAssignment(req.params.id, assignmentData);
-            res.status(201).json(assignment);
-        } catch (err) {
-            handleApiError(res, err, 'roster assignment');
-        }
-    },
-
-    updateRosterAssignment: async (req, res) => {
-        try {
-            const assignment = await rosterModel.updateAssignment(req.params.assignmentId, req.body);
-            if (!assignment) {
-                return res.status(404).json({ message: 'Assignment not found' });
-            }
-            res.json(assignment);
-        } catch (err) {
-            handleApiError(res, err, 'roster assignment');
-        }
-    },
-
-    removeRosterAssignment: async (req, res) => {
-        try {
-            await rosterModel.removeAssignment(req.params.assignmentId);
-            res.status(204).send();
-        } catch (err) {
-            handleApiError(res, err, 'roster assignment');
-        }
-    },
-
-    // SHIFT OFFERING SYSTEM
-    createShiftOffer: async (req, res) => {
-        try {
-            const offerData = { ...req.body, offered_by: req.user.id };
-            const offer = await rosterModel.createShiftOffer(req.params.assignmentId, offerData);
-            res.status(201).json(offer);
-        } catch (err) {
-            handleApiError(res, err, 'shift offer');
-        }
-    },
-
-    getShiftOffers: async (req, res) => {
-        try {
-            const offers = await rosterModel.findShiftOffers(req.params.id, req.query.userId);
-            res.json(offers);
-        } catch (err) {
-            handleApiError(res, err, 'shift offer');
-        }
-    },
-
-    updateShiftOffer: async (req, res) => {
-        try {
-            const updateData = { ...req.body, responded_at: new Date() };
-            const offer = await rosterModel.updateShiftOffer(req.params.offerId, updateData);
-            if (!offer) {
-                return res.status(404).json({ message: 'Shift offer not found' });
-            }
-            res.json(offer);
-        } catch (err) {
-            handleApiError(res, err, 'shift offer');
-        }
-    },
-
-    acceptShiftOffer: async (req, res) => {
-        try {
-            const result = await rosterModel.acceptShiftOffer(req.params.offerId, req.user.id);
-            res.json(result);
-        } catch (err) {
-            handleApiError(res, err, 'shift offer acceptance');
-        }
-    },
-
-    // AVAILABILITY MANAGEMENT
-    setMemberAvailability: async (req, res) => {
-        try {
-            const availabilityData = { ...req.body, updated_by: req.user.id };
-            const availability = await rosterModel.setMemberAvailability(
-                req.params.memberId, 
-                req.params.id, 
-                availabilityData
-            );
-            res.json(availability);
-        } catch (err) {
-            handleApiError(res, err, 'member availability');
-        }
-    },
-
-    getMemberAvailability: async (req, res) => {
-        try {
-            const availability = await rosterModel.getMemberAvailability(req.params.id);
-            res.json(availability);
-        } catch (err) {
-            handleApiError(res, err, 'member availability');
-        }
-    },
-
-    getAvailableMembers: async (req, res) => {
-        try {
-            const members = await rosterModel.getAvailableMembers(req.params.id);
-            res.json(members);
-        } catch (err) {
-            handleApiError(res, err, 'available members');
-        }
-    },
-
-    // SHIFT ROLES MANAGEMENT
     getShiftRoles: async (req, res) => {
         try {
-            const roles = await shiftRoleModel.findAll();
-            res.json(roles);
+            const result = await pool.query('SELECT * FROM shift_roles ORDER BY name');
+            res.json(result.rows);
         } catch (err) {
-            handleApiError(res, err, 'shift role');
+            handleApiError(res, err, 'shift roles');
         }
-    }
+    },
+
+    // Stub implementations for other methods
+    createRoster: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    updateRoster: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    deleteRoster: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    getRosterAssignments: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    assignMemberToRoster: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    updateRosterAssignment: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    removeRosterAssignment: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    createShiftOffer: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    getShiftOffers: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    updateShiftOffer: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    acceptShiftOffer: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    setMemberAvailability: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    getMemberAvailability: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); },
+    getAvailableMembers: async (req, res) => { res.status(501).json({ message: 'Not implemented yet' }); }
 };

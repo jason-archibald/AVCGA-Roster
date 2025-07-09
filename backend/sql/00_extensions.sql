@@ -1,4 +1,4 @@
--- Enable UUID generation extension
--- This must run before any tables that use uuid_generate_v4()
+-- Enable required PostgreSQL extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-\echo 'UUID extension enabled.'
+CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+\echo 'PostgreSQL extensions enabled.';

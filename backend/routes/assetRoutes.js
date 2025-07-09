@@ -13,10 +13,8 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { authorize } = require('../middleware/roleMiddleware');
 
-// Define admin access roles
-const adminAccess = ['SuperAdmin', 'SquadronCommander', 'FlotillaExecutive'];
+const adminAccess = ['SuperAdmin', 'SquadronCommander', 'FlotillaCommander'];
 
-// Vessel routes
 router.route('/vessels')
     .get(protect, getAllVessels)
     .post(protect, authorize(...adminAccess), createVessel);
@@ -25,7 +23,6 @@ router.route('/vessels/:id')
     .put(protect, authorize(...adminAccess), updateVessel)
     .delete(protect, authorize(...adminAccess), deleteVessel);
 
-// Vehicle routes
 router.route('/vehicles')
     .get(protect, getAllVehicles)
     .post(protect, authorize(...adminAccess), createVehicle);

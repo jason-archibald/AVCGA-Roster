@@ -4,27 +4,44 @@ const {
     getAllUsers,
     getUserById,
     createUser,
-    // updateUser,
-    // deleteUser,
-    getMyProfile
+    updateUser,
+    deleteUser,
+    getMyProfile,
+    updateMyProfile,
+    changePassword,
+    requestPasswordReset,
+    resetPassword,
+    getFlotillas
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
-const { authorize } = require('../middleware/roleMiddleware'); // Assuming this exists
+const { authorize } = require('../middleware/roleMiddleware');
 
-// Define reusable role arrays
-const adminAccess = ['SuperAdmin', 'SquadronCommander', 'FlotillaExecutive'];
+// Define access roles
+const adminAccess = ['SuperAdmin', 'SquadronCommander', 'FlotillaCommander'];
+const seniorAdminAccess = ['SuperAdmin', 'SquadronCommander'];
 
-// --- Member-specific routes ---
+// Public routes
+router.post('/forgot-password', requestPasswordReset);
+router.post('/reset-password', resetPassword);
+
+// Member routes
 router.get('/me/profile', protect, getMyProfile);
+router.put('/me/profile', protect, updateMyProfile);
+router.put('/me/password', protect, changePassword);
 
-// --- Admin-only routes ---
+// Utility routes
+router.get('/flotillas', protect, getFlotillas);
+
+// Admin routes
 router.route('/')
     .get(protect, authorize(...adminAccess), getAllUsers)
     .post(protect, authorize(...adminAccess), createUser);
 
 router.route('/:id')
-    .get(protect, authorize(...adminAccess), getUserById);
-    // .put(protect, authorize(...adminAccess), updateUser)
-    // .delete(protect, authorize(...adminAccess), deleteUser);
+    .get(protect, authorize(...adminAccess), getUserById)
+    .put(protect, authorize(...adminAccess), updateUser)
+    .delete(protect, authorize(...seniorAdminAccess), deleteUser);
+
+router.put('/:id/password', protect, authorize(...adminAccess), changePassword);
 
 module.exports = router;
