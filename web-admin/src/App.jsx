@@ -1,34 +1,40 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import Layout from './components/Layout';
+import Login from './components/Login';
+import Dashboard from './components/Dashboard';
+import MemberManagement from './components/MemberManagement';
+import MemberDetail from './components/MemberDetail';
+import MemberForm from './components/MemberForm';
+import AssetManagement from './components/AssetManagement';
+import OrganizationManagement from './components/OrganizationManagement';
+import RosterManagement from './components/RosterManagement';
+import PasswordManagement from './components/PasswordManagement';
 import ProtectedRoute from './components/ProtectedRoute';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import UserListPage from './pages/UserListPage';
-import UserDetailPage from './pages/UserDetailPage';
-import UserFormPage from './pages/UserFormPage';
-import AssetPage from './pages/AssetPage';
-import OrganizationPage from './pages/OrganizationPage';
-import RosterPage from './pages/RosterPage';
-import RosterDetailPage from './pages/RosterDetailPage';
+import './App.css';
 
 function App() {
-  return (
-    <Layout>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/users" element={<ProtectedRoute><UserListPage /></ProtectedRoute>} />
-        <Route path="/users/:userId" element={<ProtectedRoute><UserDetailPage /></ProtectedRoute>} />
-        <Route path="/users/new" element={<ProtectedRoute><UserFormPage /></ProtectedRoute>} />
-        <Route path="/users/edit/:userId" element={<ProtectedRoute><UserFormPage /></ProtectedRoute>} />
-        <Route path="/assets" element={<ProtectedRoute><AssetPage /></ProtectedRoute>} />
-        <Route path="/organization" element={<ProtectedRoute><OrganizationPage /></ProtectedRoute>} />
-        <Route path="/rosters" element={<ProtectedRoute><RosterPage /></ProtectedRoute>} />
-        <Route path="/rosters/:rosterId" element={<ProtectedRoute><RosterDetailPage /></ProtectedRoute>} />
-      </Routes>
-    </Layout>
-  );
+    return (
+        <AuthProvider>
+            <Router basename="/admin">
+                <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/" element={
+                        <ProtectedRoute><Layout><Navigate to="/dashboard" replace /></Layout></ProtectedRoute>
+                    } />
+                    <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+                    <Route path="/users" element={<ProtectedRoute><Layout><MemberManagement /></Layout></ProtectedRoute>} />
+                    <Route path="/users/:userId" element={<ProtectedRoute><Layout><MemberDetail /></Layout></ProtectedRoute>} />
+                    <Route path="/users/new" element={<ProtectedRoute><Layout><MemberForm /></Layout></ProtectedRoute>} />
+                    <Route path="/users/edit/:userId" element={<ProtectedRoute><Layout><MemberForm /></Layout></ProtectedRoute>} />
+                    <Route path="/assets" element={<ProtectedRoute><Layout><AssetManagement /></Layout></ProtectedRoute>} />
+                    <Route path="/organization" element={<ProtectedRoute><Layout><OrganizationManagement /></Layout></ProtectedRoute>} />
+                    <Route path="/rosters" element={<ProtectedRoute><Layout><RosterManagement /></Layout></ProtectedRoute>} />
+                    <Route path="/password" element={<ProtectedRoute><Layout><PasswordManagement /></Layout></ProtectedRoute>} />
+                </Routes>
+            </Router>
+        </AuthProvider>
+    );
 }
-
 export default App;

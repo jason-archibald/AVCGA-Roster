@@ -1,43 +1,49 @@
-import axios from 'axios';
+import api from './api';
 
-// Create axios instance with interceptor for auth token
-const api = axios.create();
-api.interceptors.request.use(config => {
-    const token = localStorage.getItem('token');
-    if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-});
-
-const login = async (email, password) => {
-    try {
-        const response = await axios.post('/api/auth/login', { email, password });
+const authService = {
+    login: async (email, password) => {
+        const response = await api.post('/api/auth/login', { email, password });
         if (response.data.token) {
-            localStorage.setItem('token', response.data.token);
+            localStorage.setItem('user', JSON.stringify(response.data));
         }
         return response.data;
-    } catch (error) {
-        throw new Error(error.response?.data?.message || 'Login failed');
-    }
-};
+    },
 
-const logout = () => {
-    localStorage.removeItem('token');
-};
+    logout: () => {
+        localStorage.removeItem('user');
+    },
 
-const getProfile = async () => {
-    try {
-        const response = await api.get('/api/users/me/profile');
+    getCurrentUser: () => {
+        try {
+            return JSON.parse(localStorage.getItem('user'));
+        } catch (e) {
+            return null;
+        }
+    },
+    
+    // Password Management
+    changePassword: async (currentPassword, newPassword) => {
+        const response = await api.post('/api/auth/change-password', {
+            currentPassword,
+            newPassword
+        });
         return response.data;
-    } catch (error) {
-        logout(); // Clear invalid token
-        throw new Error('Session expired');
+    },
+
+    requestPasswordReset: async (email) => {
+        const response = await api.post('/api/auth/request-reset', {
+            email
+        });
+        return response.data;
+    },
+
+    resetPassword: async (token, newPassword) => {
+        const response = await api.post('/api/auth/reset-password', {
+            token,
+            newPassword
+        });
+        return response.data;
     }
 };
 
-export default {
-    login,
-    logout,
-    getProfile
-};
+export default authService;
